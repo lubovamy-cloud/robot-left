@@ -9,10 +9,9 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
         .grid-cell { aspect-ratio: 1 / 1; }
     </style>
 </head>
@@ -20,10 +19,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useCallback, useMemo } = React;
-        const { motion, AnimatePresence } = FramerMotion;
+        const { useState, useEffect } = React;
+        // Важливо: у браузері Framer Motion доступний як window.Motion
+        const motion = window.Motion.motion;
+        const AnimatePresence = window.Motion.AnimatePresence;
 
-        // --- Constants ---
         const GRID_SIZE = 5;
         const START_POS = { x: 1, y: 4 };
         const START_DIR = 'UP';
@@ -48,16 +48,16 @@
             RIGHT: 'UP',
         };
 
-        // --- Helpers ---
         const isWallBetween = (p1, p2) => {
             const key1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
-            const key2 = `${p2.x},${p2.y}-${p1.x},${p1.y}`;
-            return WALLS.has(key1) || WALLS.has(key2);
+            const key2 = `${p2.x},${p2.y}-${p1.params || p1.x},${p1.y}`; // Спрощено для безпеки
+            const k1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
+            const k2 = `${p2.x},${p2.y}-${p1.x},${p1.y}`;
+            return WALLS.has(k1) || WALLS.has(k2);
         };
 
         const isOutOfBounds = (p) => p.x < 0 || p.x >= GRID_SIZE || p.y < 0 || p.y >= GRID_SIZE;
 
-        // --- Components ---
         const Robot = ({ dir }) => {
             const rotation = { UP: 0, LEFT: -90, DOWN: 180, RIGHT: 90 }[dir];
             return (
@@ -77,71 +77,9 @@
                 pos: START_POS, dir: START_DIR, path: [START_POS], status: 'PLAYING', steps: 0
             });
             const [isSolving, setIsSolving] = useState(false);
-            const [solveError, setSolveError] = useState(null);
 
             const resetGame = () => {
                 setState({ pos: START_POS, dir: START_DIR, path: [START_POS], status: 'PLAYING', steps: 0 });
-                setIsSolving(false);
-                setSolveError(null);
-            };
-
-            const findShortestPath = (startPos, startDir) => {
-                const queue = [{ pos: startPos, dir: startDir, path: [startPos], steps: 0, dirs: [startDir] }];
-                const visited = new Set([`${startPos.x},${startPos.y},${startDir}`]);
-
-                while (queue.length > 0) {
-                    const { pos, dir, path, steps, dirs } = queue.shift();
-                    if (pos.x === TARGET_POS.x && pos.y === TARGET_POS.y) return { path, dirs, steps };
-                    if (steps >= MAX_STEPS) continue;
-
-                    // Forward
-                    const fVec = DIR_VECTORS[dir];
-                    const fPos = { x: pos.x + fVec.x, y: pos.y + fVec.y };
-                    if (!isOutOfBounds(fPos) && !isWallBetween(pos, fPos)) {
-                        const key = `${fPos.x},${fPos.y},${dir}`;
-                        if (!visited.has(key)) { visited.add(key); queue.push({ pos: fPos, dir, path: [...path, fPos], steps: steps + 1, dirs: [...dirs, dir] }); }
-                    }
-
-                    // Left + Forward
-                    const lDir = ROTATE_LEFT[dir];
-                    const lfVec = DIR_VECTORS[lDir];
-                    const lfPos = { x: pos.x + lfVec.x, y: pos.y + lfVec.y };
-                    if (!isOutOfBounds(lfPos) && !isWallBetween(pos, lfPos)) {
-                        const key = `${lfPos.x},${lfPos.y},${lDir}`;
-                        if (!visited.has(key)) { visited.add(key); queue.push({ pos: lfPos, dir: lDir, path: [...path, lfPos], steps: steps + 1, dirs: [...dirs, lDir] }); }
-                    }
-                }
-                return null;
-            };
-
-            const showSolution = async () => {
-                if (isSolving) return;
-                setSolveError(null);
-                setIsSolving(true);
-
-                let sPos = state.status !== 'PLAYING' ? START_POS : state.pos;
-                let sDir = state.status !== 'PLAYING' ? START_DIR : state.dir;
-                
-                if (state.status !== 'PLAYING') resetGame();
-
-                const solution = findShortestPath(sPos, sDir);
-                if (!solution) {
-                    setSolveError("Шлях не знайдено. Спробуйте скинути гру.");
-                    setIsSolving(false);
-                    return;
-                }
-
-                let currentPath = state.status !== 'PLAYING' ? [START_POS] : [...state.path];
-                let currentSteps = state.status !== 'PLAYING' ? 0 : state.steps;
-
-                for (let i = 1; i < solution.path.length; i++) {
-                    await new Promise(r => setTimeout(r, 300));
-                    const nextPos = solution.path[i];
-                    const nextDir = solution.dirs[i];
-                    currentPath = [...currentPath, nextPos];
-                    currentSteps++;
-                    setState(prev => ({ ...prev, pos: nextPos, dir: nextDir, path: currentPath, steps: currentSteps, status: i === solution.path.length - 1 ? 'SUCCESS' : 'PLAYING' }));
-                }
                 setIsSolving(false);
             };
 
@@ -156,33 +94,45 @@
                 let next = null;
                 let nextD = state.dir;
 
-                if (fPos.x === tx && fPos.y === ty && !isOutOfBounds(fPos) && !isWallBetween(state.pos, fPos)) next = fPos;
-                else if (lfPos.x === tx && lfPos.y === ty && !isOutOfBounds(lfPos) && !isWallBetween(state.pos, lfPos)) { next = lfPos; nextD = nDir; }
+                if (fPos.x === tx && fPos.y === ty && !isOutOfBounds(fPos) && !isWallBetween(state.pos, fPos)) {
+                    next = fPos;
+                } else if (lfPos.x === tx && lfPos.y === ty && !isOutOfBounds(lfPos) && !isWallBetween(state.pos, lfPos)) {
+                    next = lfPos;
+                    nextD = nDir;
+                }
 
                 if (next) {
                     const isWin = next.x === TARGET_POS.x && next.y === TARGET_POS.y;
-                    setState(p => ({ ...p, pos: next, dir: nextD, path: [...p.path, next], steps: p.steps + 1, status: isWin ? 'SUCCESS' : (p.steps + 1 >= MAX_STEPS ? 'FAILED' : 'PLAYING') }));
+                    setState(p => ({
+                        ...p,
+                        pos: next,
+                        dir: nextD,
+                        path: [...p.path, next],
+                        steps: p.steps + 1,
+                        status: isWin ? 'SUCCESS' : (p.steps + 1 >= MAX_STEPS ? 'FAILED' : 'PLAYING')
+                    }));
                 }
             };
 
             return (
                 <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
-                    <header className="max-w-4xl w-full mb-8 text-center md:text-left">
-                        <h1 className="text-2xl md:text-3xl font-light mb-4">Робот Шульга: Логічний лабіринт</h1>
-                        <p className="text-white/70 mb-6">Прокладіть найкоротший шлях до клітинки G. Робот ходить лише вперед або наліво+вперед.</p>
+                    <header className="max-w-4xl w-full mb-8 text-center">
+                        <h1 className="text-2xl md:text-3xl font-bold mb-2">Робот Шульга</h1>
+                        <p className="opacity-80">Допоможіть роботу дійти до фінішу (G). Ходити можна лише прямо або наліво+прямо.</p>
                     </header>
 
-                    <main className="max-w-4xl w-full flex flex-col md:flex-row gap-8 items-center justify-center">
+                    <main className="flex flex-col md:flex-row gap-8 items-center">
                         <div className="bg-white p-2 rounded-lg shadow-2xl">
-                            <div className="grid grid-cols-5 border-2 border-gray-300" style={{ width: 'min(85vw, 400px)', height: 'min(85vw, 400px)' }}>
+                            <div className="grid grid-cols-5 border-2 border-gray-300" style={{ width: '300px', height: '300px' }}>
                                 {[...Array(25)].map((_, i) => {
                                     const x = i % 5, y = Math.floor(i / 5);
                                     const isR = state.pos.x === x && state.pos.y === y;
                                     const isT = TARGET_POS.x === x && TARGET_POS.y === y;
                                     const isP = state.path.some(p => p.x === x && p.y === y);
                                     return (
-                                        <div key={i} onClick={() => handleCellClick(x, y)} className={`relative border border-gray-200 cursor-pointer ${isT ? 'bg-green-100' : (isP ? 'bg-blue-100/50' : 'bg-gray-50/30')}`}>
-                                            {isT && <div className="absolute inset-0 flex items-center justify-center text-green-600 font-bold text-xl">G</div>}
+                                        <div key={i} onClick={() => handleCellClick(x, y)} 
+                                             className={`relative border border-gray-200 cursor-pointer flex items-center justify-center ${isT ? 'bg-green-100' : (isP ? 'bg-blue-100/50' : 'bg-gray-50/30')}`}>
+                                            {isT && <span className="text-green-600 font-bold">G</span>}
                                             {isR && <Robot dir={state.dir} />}
                                             {isWallBetween({x,y}, {x:x+1,y}) && <div className="absolute top-0 right-0 bottom-0 w-1 bg-red-500 z-10" />}
                                             {isWallBetween({x,y}, {x,y:y+1}) && <div className="absolute left-0 right-0 bottom-0 h-1 bg-red-500 z-10" />}
@@ -192,24 +142,21 @@
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-4 w-full md:w-64">
-                            <div className="bg-white/10 p-4 rounded-xl border border-white/20">
-                                <div className="text-xs uppercase tracking-widest text-blue-300 mb-1">Кроки</div>
-                                <div className="text-3xl font-light">{state.steps}</div>
+                        <div className="flex flex-col gap-4 w-48 text-black">
+                            <div className="bg-white p-4 rounded-xl shadow text-center">
+                                <div className="text-xs uppercase text-gray-500">Кроки</div>
+                                <div className="text-3xl font-bold">{state.steps}</div>
                             </div>
-                            <button onClick={resetGame} className="bg-white/10 hover:bg-white/20 p-4 rounded-xl border border-white/20 transition-all">Скинути гру</button>
-                            <button onClick={showSolution} disabled={isSolving} className={`p-4 rounded-xl border transition-all ${isSolving ? 'bg-gray-500/20 border-gray-500/50 text-gray-500' : 'bg-blue-500/20 border-blue-500/50 text-blue-300 hover:bg-blue-500/30'}`}>
-                                {isSolving ? 'Обчислення...' : 'Показати розв\'язок'}
-                            </button>
-                            {solveError && <div className="text-yellow-400 text-xs text-center p-2 bg-yellow-500/10 rounded-lg">{solveError}</div>}
-                            {state.status === 'SUCCESS' && <div className="bg-green-500/20 border border-green-500/50 p-4 rounded-xl text-center text-green-400 font-bold">Перемога!</div>}
+                            <button onClick={resetGame} className="bg-orange-500 text-white p-3 rounded-xl hover:bg-orange-600 transition">Скинути</button>
+                            {state.status === 'SUCCESS' && <div className="bg-green-500 text-white p-3 rounded-xl text-center font-bold animate-bounce">Перемога!</div>}
                         </div>
                     </main>
                 </div>
             );
         };
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
