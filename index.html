@@ -3,31 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Робот Шульга - Логічна гра</title>
+    <title>Робот Шульга - GitHub Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; }
-        .grid-cell { aspect-ratio: 1 / 1; }
+        body { font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .grid-container { display: grid; grid-template-columns: repeat(5, 1fr); border: 2px solid #4b5563; background: white; }
+        .cell { aspect-ratio: 1/1; position: relative; border: 0.5px solid #e5e7eb; cursor: pointer; transition: background 0.2s; }
+        .cell:hover { background-color: rgba(243, 244, 246, 0.8); }
+        .wall-v { position: absolute; top: 0; right: -1px; bottom: 0; width: 4px; background: #ef4444; z-index: 20; }
+        .wall-h { position: absolute; left: 0; right: 0; bottom: -1px; height: 4px; background: #ef4444; z-index: 20; }
+        .robot { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); width: 80%; height: 80%; }
+        .success-overlay { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-[#1a4d5e] text-white">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        // Важливо: у браузері Framer Motion доступний як window.Motion
-        const motion = window.Motion.motion;
-        const AnimatePresence = window.Motion.AnimatePresence;
+        const { useState, useEffect, useCallback } = React;
 
         const GRID_SIZE = 5;
         const START_POS = { x: 1, y: 4 };
-        const START_DIR = 'UP';
         const TARGET_POS = { x: 3, y: 4 };
+        const START_DIR = 'UP';
         const MAX_STEPS = 100;
 
         const WALLS = new Set([
@@ -35,40 +38,27 @@
         ]);
 
         const DIR_VECTORS = {
-            UP: { x: 0, y: -1 },
-            LEFT: { x: -1, y: 0 },
-            DOWN: { x: 0, y: 1 },
-            RIGHT: { x: 1, y: 0 },
+            UP: { x: 0, y: -1 }, LEFT: { x: -1, y: 0 }, DOWN: { x: 0, y: 1 }, RIGHT: { x: 1, y: 0 }
         };
 
         const ROTATE_LEFT = {
-            UP: 'LEFT',
-            LEFT: 'DOWN',
-            DOWN: 'RIGHT',
-            RIGHT: 'UP',
+            UP: 'LEFT', LEFT: 'DOWN', DOWN: 'RIGHT', RIGHT: 'UP'
         };
 
-        const isWallBetween = (p1, p2) => {
-            const key1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
-            const key2 = `${p2.x},${p2.y}-${p1.params || p1.x},${p1.y}`; // Спрощено для безпеки
-            const k1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
-            const k2 = `${p2.x},${p2.y}-${p1.x},${p1.y}`;
-            return WALLS.has(k1) || WALLS.has(k2);
+        const isWall = (p1, p2) => {
+            return WALLS.has(`${p1.x},${p1.y}-${p2.x},${p2.y}`) || WALLS.has(`${p2.x},${p2.y}-${p1.x},${p1.y}`);
         };
 
-        const isOutOfBounds = (p) => p.x < 0 || p.x >= GRID_SIZE || p.y < 0 || p.y >= GRID_SIZE;
-
-        const Robot = ({ dir }) => {
-            const rotation = { UP: 0, LEFT: -90, DOWN: 180, RIGHT: 90 }[dir];
+        const RobotIcon = ({ dir }) => {
+            const rotations = { UP: 0, LEFT: -90, DOWN: 180, RIGHT: 90 };
             return (
-                <motion.div
-                    animate={{ rotate: rotation }}
-                    className="w-full h-full flex items-center justify-center"
-                >
-                    <div className="w-4/5 h-4/5 rounded-full border-2 border-blue-500 bg-blue-100/50 flex items-center justify-center shadow-inner">
-                        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[14px] border-b-pink-500" style={{ transform: 'translateY(-2px)' }} />
+                <div className="robot flex items-center justify-center" style={{ transform: `rotate(${rotations[dir]}deg)` }}>
+                    <div className="w-full h-full rounded-full border-2 border-blue-500 bg-blue-100 flex items-center justify-center shadow-md">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5L19 18H5L12 5Z" fill="#ec4899" />
+                        </svg>
                     </div>
-                </motion.div>
+                </div>
             );
         };
 
@@ -78,79 +68,114 @@
             });
             const [isSolving, setIsSolving] = useState(false);
 
-            const resetGame = () => {
-                setState({ pos: START_POS, dir: START_DIR, path: [START_POS], status: 'PLAYING', steps: 0 });
+            const reset = () => setState({
+                pos: START_POS, dir: START_DIR, path: [START_POS], status: 'PLAYING', steps: 0
+            });
+
+            const solve = async () => {
+                if (isSolving) return;
+                setIsSolving(true);
+                
+                // Простий BFS для пошуку шляху
+                const queue = [{ pos: state.status !== 'PLAYING' ? START_POS : state.pos, dir: state.status !== 'PLAYING' ? START_DIR : state.dir, path: [], steps: 0, dirs: [] }];
+                const visited = new Set();
+                let found = null;
+
+                while(queue.length > 0) {
+                    const curr = queue.shift();
+                    const key = `${curr.pos.x},${curr.pos.y},${curr.dir}`;
+                    if (visited.has(key)) continue;
+                    visited.add(key);
+
+                    if (curr.pos.x === TARGET_POS.x && curr.pos.y === TARGET_POS.y) { found = curr; break; }
+                    if (curr.steps > 50) continue;
+
+                    // Вперед
+                    const fv = DIR_VECTORS[curr.dir];
+                    const fp = { x: curr.pos.x + fv.x, y: curr.pos.y + fv.y };
+                    if (fp.x >= 0 && fp.x < 5 && fp.y >= 0 && fp.y < 5 && !isWall(curr.pos, fp)) {
+                        queue.push({ pos: fp, dir: curr.dir, path: [...curr.path, fp], steps: curr.steps + 1, dirs: [...curr.dirs, curr.dir] });
+                    }
+
+                    // Наліво + вперед
+                    const ld = ROTATE_LEFT[curr.dir];
+                    const lfv = DIR_VECTORS[ld];
+                    const lfp = { x: curr.pos.x + lfv.x, y: curr.pos.y + lfv.y };
+                    if (lfp.x >= 0 && lfp.x < 5 && lfp.y >= 0 && lfp.y < 5 && !isWall(curr.pos, lfp)) {
+                        queue.push({ pos: lfp, dir: ld, path: [...curr.path, lfp], steps: curr.steps + 1, dirs: [...curr.dirs, ld] });
+                    }
+                }
+
+                if (found) {
+                    if (state.status !== 'PLAYING') reset();
+                    let p = state.status !== 'PLAYING' ? [START_POS] : [...state.path];
+                    for (let i = 0; i < found.path.length; i++) {
+                        await new Promise(r => setTimeout(r, 400));
+                        p.push(found.path[i]);
+                        setState(s => ({ ...s, pos: found.path[i], dir: found.dirs[i], path: [...p], steps: s.steps + 1, status: i === found.path.length - 1 ? 'SUCCESS' : 'PLAYING' }));
+                    }
+                } else {
+                    alert("Шлях не знайдено! Спробуйте скинути гру.");
+                }
                 setIsSolving(false);
             };
 
-            const handleCellClick = (tx, ty) => {
+            const click = (x, y) => {
                 if (state.status !== 'PLAYING' || isSolving) return;
-                const forwardVec = DIR_VECTORS[state.dir];
-                const fPos = { x: state.pos.x + forwardVec.x, y: state.pos.y + forwardVec.y };
-                const nDir = ROTATE_LEFT[state.dir];
-                const lfVec = DIR_VECTORS[nDir];
-                const lfPos = { x: state.pos.x + lfVec.x, y: state.pos.y + lfVec.y };
+                const fv = DIR_VECTORS[state.dir];
+                const fp = { x: state.pos.x + fv.x, y: state.pos.y + fv.y };
+                const ld = ROTATE_LEFT[state.dir];
+                const lfv = DIR_VECTORS[ld];
+                const lfp = { x: state.pos.x + lfv.x, y: state.pos.y + lfv.y };
 
-                let next = null;
-                let nextD = state.dir;
-
-                if (fPos.x === tx && fPos.y === ty && !isOutOfBounds(fPos) && !isWallBetween(state.pos, fPos)) {
-                    next = fPos;
-                } else if (lfPos.x === tx && lfPos.y === ty && !isOutOfBounds(lfPos) && !isWallBetween(state.pos, lfPos)) {
-                    next = lfPos;
-                    nextD = nDir;
-                }
+                let next = null, nextD = state.dir;
+                if (fp.x === x && fp.y === y && !isWall(state.pos, fp)) next = fp;
+                else if (lfp.x === x && lfp.y === y && !isWall(state.pos, lfp)) { next = lfp; nextD = ld; }
 
                 if (next) {
-                    const isWin = next.x === TARGET_POS.x && next.y === TARGET_POS.y;
-                    setState(p => ({
-                        ...p,
-                        pos: next,
-                        dir: nextD,
-                        path: [...p.path, next],
-                        steps: p.steps + 1,
-                        status: isWin ? 'SUCCESS' : (p.steps + 1 >= MAX_STEPS ? 'FAILED' : 'PLAYING')
-                    }));
+                    const win = next.x === TARGET_POS.x && next.y === TARGET_POS.y;
+                    setState(s => ({ ...s, pos: next, dir: nextD, path: [...s.path, next], steps: s.steps + 1, status: win ? 'SUCCESS' : (s.steps + 1 >= MAX_STEPS ? 'FAILED' : 'PLAYING') }));
                 }
             };
 
             return (
-                <div className="min-h-screen p-4 md:p-8 flex flex-col items-center">
-                    <header className="max-w-4xl w-full mb-8 text-center">
-                        <h1 className="text-2xl md:text-3xl font-bold mb-2">Робот Шульга</h1>
-                        <p className="opacity-80">Допоможіть роботу дійти до фінішу (G). Ходити можна лише прямо або наліво+прямо.</p>
-                    </header>
-
-                    <main className="flex flex-col md:flex-row gap-8 items-center">
-                        <div className="bg-white p-2 rounded-lg shadow-2xl">
-                            <div className="grid grid-cols-5 border-2 border-gray-300" style={{ width: '300px', height: '300px' }}>
-                                {[...Array(25)].map((_, i) => {
-                                    const x = i % 5, y = Math.floor(i / 5);
-                                    const isR = state.pos.x === x && state.pos.y === y;
-                                    const isT = TARGET_POS.x === x && TARGET_POS.y === y;
-                                    const isP = state.path.some(p => p.x === x && p.y === y);
-                                    return (
-                                        <div key={i} onClick={() => handleCellClick(x, y)} 
-                                             className={`relative border border-gray-200 cursor-pointer flex items-center justify-center ${isT ? 'bg-green-100' : (isP ? 'bg-blue-100/50' : 'bg-gray-50/30')}`}>
-                                            {isT && <span className="text-green-600 font-bold">G</span>}
-                                            {isR && <Robot dir={state.dir} />}
-                                            {isWallBetween({x,y}, {x:x+1,y}) && <div className="absolute top-0 right-0 bottom-0 w-1 bg-red-500 z-10" />}
-                                            {isWallBetween({x,y}, {x,y:y+1}) && <div className="absolute left-0 right-0 bottom-0 h-1 bg-red-500 z-10" />}
-                                        </div>
-                                    );
-                                })}
-                            </div>
+                <div className="flex flex-col items-center justify-center min-h-screen p-4">
+                    <div className="max-w-md w-full">
+                        <h1 className="text-2xl font-bold mb-2 text-center">Робот Шульга</h1>
+                        <p className="text-sm text-white/70 mb-6 text-center">Тільки вперед або наліво+вперед. Дійди до G!</p>
+                        
+                        <div className="grid-container mb-6 shadow-2xl">
+                            {[...Array(25)].map((_, i) => {
+                                const x = i % 5, y = Math.floor(i / 5);
+                                const isR = state.pos.x === x && state.pos.y === y;
+                                const isT = TARGET_POS.x === x && TARGET_POS.y === y;
+                                const isP = state.path.some(p => p.x === x && p.y === y);
+                                return (
+                                    <div key={i} onClick={() => click(x, y)} className={`cell flex items-center justify-center ${isT ? 'bg-green-200' : (isP ? 'bg-blue-100/40' : '')}`}>
+                                        {isT && <span className="text-green-700 font-bold text-xl">G</span>}
+                                        {isR && <RobotIcon dir={state.dir} />}
+                                        {WALLS.has(`${x},${y}-${x+1},${y}`) && <div className="wall-v" />}
+                                        {WALLS.has(`${x},${y}-${x},${y+1}`) && <div className="wall-h" />}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        <div className="flex flex-col gap-4 w-48 text-black">
-                            <div className="bg-white p-4 rounded-xl shadow text-center">
-                                <div className="text-xs uppercase text-gray-500">Кроки</div>
-                                <div className="text-3xl font-bold">{state.steps}</div>
+                        <div className="flex flex-col gap-3">
+                            <div className="flex justify-between items-center bg-white/10 p-3 rounded-lg">
+                                <span>Кроки: <span className="font-bold text-xl">{state.steps}</span></span>
+                                <button onClick={reset} className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-md transition">Скинути</button>
                             </div>
-                            <button onClick={resetGame} className="bg-orange-500 text-white p-3 rounded-xl hover:bg-orange-600 transition">Скинути</button>
-                            {state.status === 'SUCCESS' && <div className="bg-green-500 text-white p-3 rounded-xl text-center font-bold animate-bounce">Перемога!</div>}
+                            <button onClick={solve} disabled={isSolving} className={`w-full py-3 rounded-lg font-bold transition ${isSolving ? 'bg-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}>
+                                {isSolving ? 'Робот думає...' : 'Показати розв\'язок'}
+                            </button>
+                            {state.status === 'SUCCESS' && (
+                                <div className="success-overlay bg-green-500 p-4 rounded-lg text-center font-bold">
+                                    Перемога! Пройдено за {state.steps} кроків.
+                                </div>
+                            )}
                         </div>
-                    </main>
+                    </div>
                 </div>
             );
         };
