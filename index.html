@@ -3,156 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Робот Шульга - Логічна Гра</title>
-    <!-- Використовуємо офіційний швидкий CSS фреймворк Tailwind -->
+    <title>Робот Шульга - GitHub Pages Edition</title>
+    <!-- Завантаження Tailwind CSS для сучасного стильного оформлення -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .grid-cell { aspect-ratio: 1 / 1; position: relative; }
-        .wall-right { position: absolute; top: 0; right: -2px; bottom: 0; width: 4px; background: #ef4444; z-index: 30; }
-        .wall-bottom { position: absolute; left: 0; right: 0; bottom: -2px; height: 4px; background: #ef4444; z-index: 30; }
-        .robot-indicator { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { font-family: 'Inter', sans-serif; background-color: #1a4d5e; }
+        
+        /* Спеціальні стилі для сітки */
+        .grid-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: min(85vw, 400px);
+            height: min(85vw, 400px);
+            background: #ffffff;
+            border: 2px solid #374151;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .cell-item {
+            position: relative;
+            border: 0.5px solid #e5e7eb;
+            aspect-ratio: 1/1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .cell-item:hover {
+            background-color: rgba(243, 244, 246, 0.7);
+        }
+
+        /* Стилізація червоних стінок */
+        .wall-right {
+            position: absolute;
+            top: 0;
+            right: -2px;
+            bottom: 0;
+            width: 4px;
+            background-color: #ef4444;
+            z-index: 30;
+        }
+
+        .wall-bottom {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -2px;
+            height: 4px;
+            background-color: #ef4444;
+            z-index: 30;
+        }
+
+        /* Анімація робота */
+        .robot-container {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 80%;
+            height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .robot-body {
+            width: 90%;
+            height: 90%;
+            border-radius: 9999px;
+            border: 2px solid #3b82f6;
+            background-color: rgba(219, 234, 254, 0.9);
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .robot-pointer {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 14px solid #ec4899;
+            transform: translateY(-2px);
+        }
+
+        .action-btn {
+            transition: all 0.2s ease;
+        }
     </style>
 </head>
-<body class="bg-[#1a4d5e] text-white min-h-screen p-4 md:p-8 flex flex-col items-center">
+<body class="min-h-screen text-white p-4 md:p-8 flex flex-col items-center">
 
-    <header class="max-w-4xl w-full mb-8">
-        <h1 class="text-2xl md:text-3xl font-light mb-4 text-center md:text-left">
-            Робот Шульга може виконувати програми лише з такими командами:
-        </h1>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <!-- Інструкція 1 -->
-            <div class="bg-white/10 p-4 rounded-xl border border-white/15 backdrop-blur-sm">
-                <h2 class="text-lg font-medium mb-3 flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-sm">1</span>
-                    Вперед:
-                </h2>
-                <div class="w-24 h-24 mx-auto grid grid-cols-3 grid-rows-3 bg-white/5 border border-white/20">
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10 bg-yellow-400/20"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10 relative flex items-center justify-center">
-                        <div class="border-b-[8px] border-b-pink-500 border-x-[5px] border-x-transparent w-0 h-0"></div>
-                        <div class="absolute top-0 w-px h-full border-l border-dashed border-red-500" style="transform: translateY(-50%)"></div>
-                    </div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
+    <div class="max-w-4xl w-full flex flex-col items-center">
+        <!-- Заголовок та інструкція -->
+        <header class="w-full mb-6 text-center">
+            <h1 class="text-2xl md:text-3xl font-light mb-2">
+                Робот Шульга може виконувати програми лише з такими командами:
+            </h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mb-6 text-left">
+                <div class="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/15">
+                    <h2 class="text-base font-semibold mb-1 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs">1</span>
+                        Вперед
+                    </h2>
+                    <p class="text-xs text-white/70">Рух на одну клітинку прямо за напрямком стрілки.</p>
+                </div>
+                <div class="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/15">
+                    <h2 class="text-base font-semibold mb-1 flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs">2</span>
+                        Наліво та вперед
+                    </h2>
+                    <p class="text-xs text-white/70">Поворот на 90° ліворуч та миттєвий крок на 1 клітинку вперед.</p>
+                </div>
+            </div>
+            
+            <p class="text-sm font-light text-white/80 max-w-xl mx-auto">
+                Натискайте на сусідні клітинки на дошці для переміщення робота. Проведіть його до зеленої цілі <b>G</b>.
+            </p>
+        </header>
+
+        <!-- Ігрове поле та бічна панель -->
+        <main class="w-full flex flex-col md:flex-row gap-8 items-center justify-center my-4">
+            
+            <!-- Дошка -->
+            <div class="p-2 bg-white rounded-xl shadow-2xl">
+                <div id="grid-container" class="grid-board">
+                    <!-- Клітинки будуть згенеровані через JS -->
                 </div>
             </div>
 
-            <!-- Інструкція 2 -->
-            <div class="bg-white/10 p-4 rounded-xl border border-white/15 backdrop-blur-sm">
-                <h2 class="text-lg font-medium mb-3 flex items-center gap-2">
-                    <span class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-sm">2</span>
-                    Наліво та вперед:
-                </h2>
-                <div class="w-24 h-24 mx-auto grid grid-cols-3 grid-rows-3 bg-white/5 border border-white/20">
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10 bg-yellow-400/20"></div>
-                    <div class="border border-white/10 relative flex items-center justify-center">
-                        <div class="border-b-[8px] border-b-pink-500 border-x-[5px] border-x-transparent w-0 h-0"></div>
-                        <div class="absolute left-0 w-full h-px border-t border-dashed border-red-500" style="transform: translateX(-50%)"></div>
+            <!-- Керування та Статистика -->
+            <div class="flex flex-col gap-4 w-full md:w-64">
+                <!-- Картка статистики -->
+                <div class="bg-white/10 p-5 rounded-xl backdrop-blur-md border border-white/15 shadow-xl">
+                    <div class="text-[10px] uppercase tracking-widest text-blue-300 font-semibold mb-1">
+                        Статистика кроків
                     </div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
-                    <div class="border border-white/10"></div>
+                    <div id="steps-counter" class="text-4xl font-light">0</div>
+                    <div class="text-[11px] text-white/50">Максимальний ліміт: 100 кроків</div>
                 </div>
+
+                <!-- Кнопки керування -->
+                <button id="reset-btn" class="action-btn w-full py-3.5 bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 rounded-xl font-medium tracking-wide">
+                    Скинути гру
+                </button>
+
+                <button id="solve-btn" class="action-btn w-full py-4 bg-blue-500/20 hover:bg-blue-500/30 active:scale-95 border border-blue-500/50 text-blue-300 rounded-xl font-medium flex items-center justify-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    <span>Показати розв'язок</span>
+                </button>
+
+                <!-- Блок сповіщень та станів -->
+                <div id="status-box" class="hidden"></div>
             </div>
 
-            <!-- Обмеження -->
-            <div class="bg-white/10 p-4 rounded-xl border border-white/15 backdrop-blur-sm">
-                <h2 class="text-lg font-medium mb-3 flex items-center gap-2 text-red-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    Обмеження:
-                </h2>
-                <p class="text-sm text-gray-300 leading-relaxed mb-2">
-                    Повороти направо та рух через стінки — неможливі.
-                </p>
-                <div class="flex justify-center mt-2">
-                    <div class="w-12 h-12 bg-white/5 border border-white/20 rounded relative flex items-center justify-center">
-                        <div class="border-b-[8px] border-b-pink-500 border-x-[5px] border-x-transparent w-0 h-0"></div>
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="w-8 h-8 border-2 border-red-500 rounded-full flex items-center justify-center relative">
-                                <div class="w-6 h-0.5 bg-red-500 rotate-45 absolute"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </main>
+    </div>
 
-        <p class="text-base font-light mb-6 text-center md:text-left">
-            На малюнку нижче прокладіть найкоротший маршрут від робота до зеленої клітинки. 
-            Послідовно клікайте по сусідніх клітинках для руху.
-        </p>
-    </header>
-
-    <main class="max-w-4xl w-full flex flex-col md:flex-row gap-8 items-center justify-center">
-        <!-- Поле гри (Canvas) -->
-        <div class="relative bg-white p-2 rounded-xl shadow-2xl">
-            <div id="grid-board" class="grid grid-cols-5 border-2 border-gray-300" style="width: min(85vw, 380px); height: min(85vw, 380px);">
-                <!-- Осередки будуть згенеровані через Javascript -->
-            </div>
-        </div>
-
-        <!-- Панель приладів збоку -->
-        <div class="flex flex-col gap-4 w-full md:w-64">
-            <div class="bg-white/10 p-5 rounded-2xl border border-white/15 backdrop-blur-md shadow-xl text-center md:text-left">
-                <div class="text-xs uppercase tracking-widest text-blue-300 mb-1 font-semibold">Статистика</div>
-                <div id="steps-counter" class="text-4xl font-light">0</div>
-                <div class="text-xs text-gray-400 mt-1">Кількість кроків</div>
-            </div>
-
-            <button id="btn-reset" class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 border border-white/15 py-3.5 rounded-xl font-medium transition duration-250">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"/></svg>
-                Скинути гру
-            </button>
-
-            <button id="btn-solution" class="w-full flex items-center justify-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 py-3.5 rounded-xl font-medium text-blue-300 transition duration-250">
-                <svg id="solve-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span>Показати розв'язок</span>
-            </button>
-
-            <div id="error-banner" class="hidden bg-yellow-500/20 border border-yellow-500/40 p-4 rounded-xl text-xs text-yellow-300 text-center"></div>
-
-            <div id="success-banner" class="hidden bg-green-500/20 border border-green-500/40 p-5 rounded-xl text-center">
-                <svg class="w-10 h-10 text-green-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0yz"/></svg>
-                <h3 class="text-lg font-bold text-green-400">Вітаємо!</h3>
-                <p class="text-xs text-green-200/80 mt-1">Ви успішно дісталися цілі.</p>
-            </div>
-        </div>
-    </main>
-
-    <footer class="mt-12 text-white/40 text-xs flex items-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Використовуйте тільки дозволені маневри
-    </footer>
-
-    <!-- Логіка гри на чистому Vanilla JS -->
+    <!-- Логіка гри (Ванільний JS без залежностей) -->
     <script>
-        // --- Налаштування світу ---
+        // --- Стан гри ---
         const GRID_SIZE = 5;
         const START_POS = { x: 1, y: 4 };
         const TARGET_POS = { x: 3, y: 4 };
         const START_DIR = 'UP';
         const MAX_STEPS = 100;
 
-        // Стіни (перевірено за завантаженим малюнком)
+        let pos = { ...START_POS };
+        let dir = START_DIR;
+        let path = [{ ...START_POS }];
+        let steps = 0;
+        let status = 'PLAYING'; // 'PLAYING', 'SUCCESS', 'FAILED'
+        let isSolving = false;
+
+        // Конфігурація стін точно як на вашому малюнку
         const WALLS = new Set([
-            "1,0-2,0",
-            "2,1-2,2",
-            "2,2-3,2",
-            "1,3-2,3",
-            "2,4-3,4",
-            "4,3-4,4"
+            "1,0-2,0", // Вертикальна зверху
+            "2,1-2,2", // Горизонтальна по центру
+            "2,2-3,2", // Вертикальна по центру
+            "1,3-2,3", // Вертикальна знизу-зліва
+            "2,4-3,4", // Вертикальна біля G
+            "4,3-4,4"  // Горизонтальна в правому кутку
         ]);
 
         const DIR_VECTORS = {
@@ -169,84 +206,223 @@
             RIGHT: 'UP'
         };
 
-        const ROTATIONS = {
+        const ROTATION_DEGREES = {
             UP: 0,
             LEFT: -90,
             DOWN: 180,
             RIGHT: 90
         };
 
-        // --- Стан гри ---
-        let pos = { ...START_POS };
-        let dir = START_DIR;
-        let path = [{ ...START_POS }];
-        let steps = 0;
-        let status = 'PLAYING'; // 'PLAYING', 'SUCCESS', 'FAILED'
-        let isSolving = false;
-
         // --- Допоміжні функції ---
         function isWallBetween(p1, p2) {
-            const k1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
-            const k2 = `${p2.x},${p2.y}-${p1.x},${p1.y}`;
-            return WALLS.has(k1) || WALLS.has(k2);
+            const key1 = `${p1.x},${p1.y}-${p2.x},${p2.y}`;
+            const key2 = `${p2.x},${p2.y}-${p1.x},${p1.y}`;
+            return WALLS.has(key1) || WALLS.has(key2);
         }
 
         function isOutOfBounds(p) {
             return p.x < 0 || p.x >= GRID_SIZE || p.y < 0 || p.y >= GRID_SIZE;
         }
 
-        // --- Пошук шляху (BFS) ---
+        // --- Ініціалізація дошки та рендеринг ---
+        const gridContainer = document.getElementById('grid-container');
+        const stepsCounter = document.getElementById('steps-counter');
+        const resetBtn = document.getElementById('reset-btn');
+        const solveBtn = document.getElementById('solve-btn');
+        const statusBox = document.getElementById('status-box');
+
+        function initAndRenderGrid() {
+            gridContainer.innerHTML = '';
+            
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell-item';
+                    
+                    const isRobot = pos.x === x && pos.y === y;
+                    const isTarget = TARGET_POS.x === x && TARGET_POS.y === y;
+                    const isVisited = path.some(p => p.x === x && p.y === y);
+
+                    // Кольори клітинок
+                    if (isTarget) {
+                        cell.classList.add('bg-green-100');
+                    } else if (isVisited) {
+                        cell.classList.add('bg-blue-100/40');
+                    } else {
+                        cell.classList.add('bg-gray-50/20');
+                    }
+
+                    // Текст цілі 'G'
+                    if (isTarget) {
+                        const tText = document.createElement('span');
+                        tText.className = 'text-green-600 font-bold text-xl select-none';
+                        tText.innerText = 'G';
+                        cell.appendChild(tText);
+                    }
+
+                    // Додавання іконки Робота
+                    if (isRobot) {
+                        const roboCont = document.createElement('div');
+                        roboCont.className = 'robot-container';
+                        roboCont.style.transform = `rotate(${ROTATION_DEGREES[dir]}deg)`;
+                        
+                        const roboBody = document.createElement('div');
+                        roboBody.className = 'robot-body';
+                        
+                        const pointer = document.createElement('div');
+                        pointer.className = 'robot-pointer';
+                        
+                        roboBody.appendChild(pointer);
+                        roboCont.appendChild(roboBody);
+                        cell.appendChild(roboCont);
+                    }
+
+                    // Рендеринг стін
+                    if (isWallBetween({ x, y }, { x: x + 1, y })) {
+                        const vWall = document.createElement('div');
+                        vWall.className = 'wall-v';
+                        cell.appendChild(vWall);
+                    }
+                    if (isWallBetween({ x, y }, { x, y: y + 1 })) {
+                        const hWall = document.createElement('div');
+                        hWall.className = 'wall-h';
+                        cell.appendChild(hWall);
+                    }
+
+                    // Клік по клітинці
+                    cell.addEventListener('click', () => handleCellClick(x, y));
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+
+        function updateUI() {
+            // Оновлення лічильника
+            stepsCounter.innerText = steps;
+
+            // Стан розв'язку
+            if (isSolving) {
+                solveBtn.disabled = true;
+                solveBtn.classList.add('bg-gray-500/20', 'text-gray-400', 'cursor-not-allowed');
+                solveBtn.classList.remove('text-blue-300', 'hover:bg-blue-500/30');
+                solveBtn.innerText = 'Шульга думає...';
+            } else {
+                solveBtn.disabled = false;
+                solveBtn.classList.remove('bg-gray-500/20', 'text-gray-400', 'cursor-not-allowed');
+                solveBtn.classList.add('text-blue-300', 'hover:bg-blue-500/30');
+                solveBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline mr-2"><polyline points="9 18 15 12 9 6"></polyline></svg>Показати розв'язок`;
+            }
+
+            // Інформація про статус гри
+            statusBox.style.display = 'block';
+            if (status === 'SUCCESS') {
+                statusBox.className = 'success-overlay bg-green-500/20 border border-green-500/50 p-4 rounded-xl text-center';
+                statusBox.innerHTML = `<h3 class="text-green-400 font-bold mb-1">Вітаємо! 🎉</h3><p class="text-xs text-green-200">Маршрут вдалося прокласти успішно за ${steps} кроків.</p>`;
+            } else if (status === 'FAILED') {
+                statusBox.className = 'success-overlay bg-red-500/20 border border-red-500/50 p-4 rounded-xl text-center';
+                statusBox.innerHTML = `<h3 class="text-red-400 font-bold mb-1">Гру закінчено ❌</h3><p class="text-xs text-red-200">Вичерпано 100 ходів. Спробуйте скинути гру.</p>`;
+            } else {
+                statusBox.style.display = 'none';
+            }
+
+            // Перемальовуємо дошку
+            initAndRenderGrid();
+        }
+
+        // --- Обробка ходу гравця ---
+        function handleCellClick(targetX, targetY) {
+            if (status !== 'PLAYING' || isSolving) return;
+
+            // Крок вперед
+            const fVec = DIR_VECTORS[dir];
+            const fPos = { x: pos.x + fVec.x, y: pos.y + fVec.y };
+
+            // Крок наліво та вперед
+            const nextDir = ROTATE_LEFT[dir];
+            const lfVec = DIR_VECTORS[nextDir];
+            const lfPos = { x: pos.x + lfVec.x, y: pos.y + lfVec.y };
+
+            let nextPos = null;
+            let nextDirState = dir;
+
+            if (fPos.x === targetX && fPos.y === targetY) {
+                if (!isOutOfBounds(fPos) && !isWallBetween(pos, fPos)) {
+                    nextPos = fPos;
+                }
+            } else if (lfPos.x === targetX && lfPos.y === targetY) {
+                if (!isOutOfBounds(lfPos) && !isWallBetween(pos, lfPos)) {
+                    nextPos = lfPos;
+                    nextDirState = nextDir;
+                }
+            }
+
+            if (nextPos) {
+                pos = nextPos;
+                dir = nextDirState;
+                path.push({ ...pos });
+                steps++;
+
+                if (pos.x === TARGET_POS.x && pos.y === TARGET_POS.y) {
+                    status = 'SUCCESS';
+                } else if (steps >= MAX_STEPS) {
+                    status = 'FAILED';
+                }
+                updateUI();
+            }
+        }
+
+        // --- Пошук Шляху (BFS Алгоритм) ---
         function findShortestPath(startPos, startDir) {
             const queue = [{
                 pos: startPos,
                 dir: startDir,
                 path: [startPos],
-                dirs: [startDir],
-                steps: 0
+                steps: 0,
+                dirs: [startDir]
             }];
             const visited = new Set();
             visited.add(`${startPos.x},${startPos.y},${startDir}`);
 
             while (queue.length > 0) {
-                const curr = queue.shift();
+                const { pos: currPos, dir: currDir, path: currPath, steps: currSteps, dirs: currDirs } = queue.shift();
 
-                if (curr.pos.x === TARGET_POS.x && curr.pos.y === TARGET_POS.y) {
-                    return curr;
+                if (currPos.x === TARGET_POS.x && currPos.y === TARGET_POS.y) {
+                    return { path: currPath, dirs: currDirs, steps: currSteps };
                 }
 
-                if (curr.steps >= MAX_STEPS) continue;
+                if (currSteps >= MAX_STEPS) continue;
 
-                // Рух 1: Вперед
-                const fVec = DIR_VECTORS[curr.dir];
-                const fPos = { x: curr.pos.x + fVec.x, y: curr.pos.y + fVec.y };
-                if (!isOutOfBounds(fPos) && !isWallBetween(curr.pos, fPos)) {
-                    const key = `${fPos.x},${fPos.y},${curr.dir}`;
+                // Рух вперед
+                const fVec = DIR_VECTORS[currDir];
+                const fPos = { x: currPos.x + fVec.x, y: currPos.y + fVec.y };
+                if (!isOutOfBounds(fPos) && !isWallBetween(currPos, fPos)) {
+                    const key = `${fPos.x},${fPos.y},${currDir}`;
                     if (!visited.has(key)) {
                         visited.add(key);
                         queue.push({
                             pos: fPos,
-                            dir: curr.dir,
-                            path: [...curr.path, fPos],
-                            dirs: [...curr.dirs, curr.dir],
-                            steps: curr.steps + 1
+                            dir: currDir,
+                            path: [...currPath, fPos],
+                            steps: currSteps + 1,
+                            dirs: [...currDirs, currDir]
                         });
                     }
                 }
 
-                // Рух 2: Поворот ліворуч + вперед
-                const lDir = ROTATE_LEFT[curr.dir];
+                // Наліво та вперед
+                const lDir = ROTATE_LEFT[currDir];
                 const lfVec = DIR_VECTORS[lDir];
-                const lfPos = { x: curr.pos.x + lfVec.x, y: curr.pos.y + lfVec.y };
-                if (!isOutOfBounds(lfPos) && !isWallBetween(curr.pos, lfPos)) {
+                const lfPos = { x: currPos.x + lfVec.x, y: currPos.y + lfVec.y };
+                if (!isOutOfBounds(lfPos) && !isWallBetween(currPos, lfPos)) {
                     const key = `${lfPos.x},${lfPos.y},${lDir}`;
                     if (!visited.has(key)) {
                         visited.add(key);
                         queue.push({
                             pos: lfPos,
                             dir: lDir,
-                            path: [...curr.path, lfPos],
-                            dirs: [...curr.dirs, lDir],
-                            steps: curr.steps + 1
+                            path: [...currPath, lfPos],
+                            steps: currSteps + 1,
+                            dirs: [...currDirs, lDir]
                         });
                     }
                 }
@@ -254,185 +430,73 @@
             return null;
         }
 
-        // --- Малювання дошки ---
-        const board = document.getElementById('grid-board');
-        const countTxt = document.getElementById('steps-counter');
-        const btnReset = document.getElementById('btn-reset');
-        const btnSolution = document.getElementById('btn-solution');
-        const solveIcon = document.getElementById('solve-icon');
-        const errBanner = document.getElementById('error-banner');
-        const succBanner = document.getElementById('success-banner');
+        async function showSolution() {
+            if (isSolving) return;
 
-        function renderBoard() {
-            board.innerHTML = '';
-            countTxt.innerText = steps;
+            let startPos = pos;
+            let startDir = dir;
+            let startPath = [...path];
+            let startSteps = steps;
 
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
-                    const cell = document.createElement('div');
-                    cell.className = 'grid-cell border border-gray-200 cursor-pointer flex items-center justify-center';
-
-                    const isRobot = pos.x === x && pos.y === y;
-                    const isTarget = TARGET_POS.x === x && TARGET_POS.y === y;
-                    const isPath = path.some(p => p.x === x && p.y === y);
-
-                    // Спеціальні фони клітинок
-                    if (isTarget) {
-                        cell.classList.add('bg-green-100');
-                        cell.innerHTML = '<span class="text-green-600 font-bold text-lg select-none">G</span>';
-                    } else if (isPath) {
-                        cell.classList.add('bg-blue-100/50');
-                    } else {
-                        cell.classList.add('bg-gray-50/30');
-                    }
-
-                    // Малювання стін
-                    if (isWallBetween({ x, y }, { x: x + 1, y })) {
-                        const wall = document.createElement('div');
-                        wall.className = 'wall-v';
-                        cell.appendChild(wall);
-                    }
-                    if (isWallBetween({ x, y }, { x, y: y + 1 })) {
-                        const wall = document.createElement('div');
-                        wall.className = 'wall-bottom';
-                        cell.appendChild(wall);
-                    }
-
-                    // Малювання Робота з правильним поворотом
-                    if (isRobot) {
-                        const robot = document.createElement('div');
-                        robot.className = 'robot-indicator w-4/5 h-4/5 rounded-full border-2 border-blue-500 bg-blue-100/60 flex items-center justify-center shadow-inner';
-                        robot.style.transform = `rotate(${ROTATIONS[dir]}deg)`;
-                        robot.innerHTML = `
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="transform: translateY(-2px)">
-                                <path d="M12 5L19 18H5L12 5Z" fill="#ec4899" />
-                            </svg>
-                        `;
-                        cell.appendChild(robot);
-                    }
-
-                    // Чутливість до тицяння мишкою
-                    cell.addEventListener('click', () => handleCellClick(x, y));
-                    board.appendChild(cell);
-                }
+            // Якщо гру вже програно або завершено успішно, спочатку скидаємо та розраховуємо наново
+            if (status !== 'PLAYING') {
+                startPos = START_POS;
+                startDir = START_DIR;
+                startPath = [{ ...START_POS }];
+                startSteps = 0;
+                
+                pos = START_POS;
+                dir = START_DIR;
+                path = [{ ...START_POS }];
+                status = 'PLAYING';
+                steps = 0;
             }
 
-            // Рендер банерів статусу
-            if (status === 'SUCCESS') {
-                succBanner.classList.remove('hidden');
-            } else {
-                succBanner.classList.add('hidden');
-            }
-        }
-
-        // --- Обробка ходу користувача ---
-        function handleCellClick(targetX, targetY) {
-            if (status !== 'PLAYING' || isSolving) return;
-
-            const fVec = DIR_VECTORS[dir];
-            const fPos = { x: pos.x + fVec.x, y: pos.y + fVec.y };
-
-            const lDir = ROTATE_LEFT[dir];
-            const lfVec = DIR_VECTORS[lDir];
-            const lfPos = { x: pos.x + lfVec.x, y: pos.y + lfVec.y };
-
-            let matched = false;
-            let nextPos = null;
-            let nextDir = dir;
-
-            if (fPos.x === targetX && fPos.y === targetY && !isOutOfBounds(fPos) && !isWallBetween(pos, fPos)) {
-                matched = true;
-                nextPos = fPos;
-            } else if (lfPos.x === targetX && lfPos.y === targetY && !isOutOfBounds(lfPos) && !isWallBetween(pos, lfPos)) {
-                matched = true;
-                nextPos = lfPos;
-                nextDir = lDir;
+            const solution = findShortestPath(startPos, startDir);
+            if (!solution) {
+                alert("З цієї позиції неможливо знайти шлях до G. Скину гру!");
+                resetGame();
+                return;
             }
 
-            if (matched && nextPos) {
-                pos = nextPos;
-                dir = nextDir;
-                path.push({ ...nextPos });
+            isSolving = true;
+            updateUI();
+
+            // Відтворюємо кожен крок розв'язку з затримкою для плавності
+            for (let i = 1; i < solution.path.length; i++) {
+                await new Promise(r => setTimeout(r, 400));
+                
+                pos = solution.path[i];
+                dir = solution.dirs[i];
+                path.push({ ...pos });
                 steps++;
 
                 if (pos.x === TARGET_POS.x && pos.y === TARGET_POS.y) {
                     status = 'SUCCESS';
-                } else if (steps >= MAX_STEPS) {
-                    status = 'FAILED';
-                    alert("Перевищено ліміт ходів! Гру перезавантажено.");
-                    reset();
-                    return;
                 }
-                renderBoard();
+                updateUI();
             }
+
+            isSolving = false;
+            updateUI();
         }
 
-        // Скинути гру
-        function reset() {
+        function resetGame() {
             pos = { ...START_POS };
             dir = START_DIR;
             path = [{ ...START_POS }];
             steps = 0;
             status = 'PLAYING';
             isSolving = false;
-            errBanner.classList.add('hidden');
-            renderBoard();
+            updateUI();
         }
 
-        // Анімація розв'язку
-        async function runAutoSolver() {
-            if (isSolving) return;
-            isSolving = true;
-            errBanner.classList.add('hidden');
-            btnSolution.disabled = true;
-            btnSolution.classList.add('opacity-60');
-            btnSolution.querySelector('span').innerText = 'Шукаю шлях...';
+        // --- Обробники подій ---
+        resetBtn.addEventListener('click', resetGame);
+        solveBtn.addEventListener('click', showSolution);
 
-            if (status !== 'PLAYING') {
-                reset();
-                await new Promise(r => setTimeout(r, 200));
-            }
-
-            const currentStartPos = { ...pos };
-            const currentStartDir = dir;
-            const shortest = findShortestPath(currentStartPos, currentStartDir);
-
-            if (!shortest) {
-                errBanner.classList.remove('hidden');
-                errBanner.innerText = "Шлях не знайдено! Робот у глухому куті. Натисніть 'Скинути гру'.";
-                btnSolution.disabled = false;
-                btnSolution.classList.remove('opacity-60');
-                btnSolution.querySelector('span').innerText = "Показати розв'язок";
-                isSolving = false;
-                return;
-            }
-
-            // Послідовна анімація кроків
-            for (let i = 1; i < shortest.path.length; i++) {
-                await new Promise(r => setTimeout(r, 355));
-                pos = shortest.path[i];
-                dir = shortest.dirs[i];
-                path.push({ ...pos });
-                steps++;
-                
-                if (pos.x === TARGET_POS.x && pos.y === TARGET_POS.y) {
-                    status = 'SUCCESS';
-                }
-                renderBoard();
-            }
-
-            btnSolution.disabled = false;
-            btnSolution.classList.remove('opacity-60');
-            btnSolution.querySelector('span').innerText = "Показати розв'язок";
-            isSolving = false;
-        }
-
-        // --- Ініціалізація слухачів ---
-        btnReset.addEventListener('click', reset);
-        btnSolution.addEventListener('click', runAutoSolver);
-
-        // Початковий рендер
-        renderBoard();
+        // Початковий рендер гри
+        resetGame();
     </script>
 </body>
 </html>
